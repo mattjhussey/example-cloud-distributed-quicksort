@@ -1,26 +1,14 @@
 """Main module for the example cloud distributed quicksort package."""
 
 import asyncio
-import structlog
+import logging
 
 
 def setup_logging():
-    """Set up structured logging."""
-    structlog.configure(
-        processors=[
-            structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer(),
-        ],
-        context_class=dict,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+    """Set up basic logging."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
 
@@ -38,8 +26,8 @@ async def quicksort_distributed(data: list[int]) -> list[int]:
         Sorted list of integers
     """
     # For now, just use Python's built-in sort as a placeholder
-    logger = structlog.get_logger()
-    logger.info("Starting distributed quicksort", data_size=len(data))
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting distributed quicksort with {len(data)} elements")
 
     # Simple quicksort implementation for demo
     if len(data) <= 1:
@@ -56,23 +44,23 @@ async def quicksort_distributed(data: list[int]) -> list[int]:
     sorted_right = await quicksort_distributed(right)
 
     result = sorted_left + middle + sorted_right
-    logger.info("Completed distributed quicksort", result_size=len(result))
+    logger.info(f"Completed distributed quicksort with {len(result)} elements")
     return result
 
 
 async def main() -> None:
     """Main application entry point."""
     setup_logging()
-    logger = structlog.get_logger()
+    logger = logging.getLogger(__name__)
 
     logger.info("Starting example cloud distributed quicksort application")
 
     # Example data to sort
     test_data = [64, 34, 25, 12, 22, 11, 90]
-    logger.info("Input data", data=test_data)
+    logger.info(f"Input data: {test_data}")
 
     sorted_data = await quicksort_distributed(test_data)
-    logger.info("Sorted data", data=sorted_data)
+    logger.info(f"Sorted data: {sorted_data}")
 
     print(f"Original: {test_data}")
     print(f"Sorted:   {sorted_data}")
