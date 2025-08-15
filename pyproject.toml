@@ -5,9 +5,6 @@ description = "An example distributed quicksort implementation for learning Kube
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aiohttp>=3.9.0",
-    "asyncio-mqtt>=0.16.0", 
-    "pydantic>=2.5.0",
     "structlog>=24.1.0",
 ]
 
