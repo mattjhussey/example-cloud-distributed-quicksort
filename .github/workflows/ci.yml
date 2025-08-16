@@ -17,35 +17,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+    
+      - name: Build Docker image
+        run: docker build -t distributed-quicksort .
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install uv
-          uv build
-
-      # Capture build artifacts from dist folder (only for tagged builds)
-      - name: Upload build artifacts
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/*
-
-      - name: Verify build artifacts
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          if [ -z "$(ls -A dist 2>/dev/null)" ]; then
-            echo "No build artifacts found in dist/"
-            exit 1
-          else
-            echo "Build artifacts found in dist/"
-          fi
+      # Future deployment step, commented out for now
+      # - name: Push Docker image
+      #   run: |
+      #     echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      #     docker tag distributed-quicksort my-docker-repo/distributed-quicksort:${{ github.sha }}
+      #     docker push my-docker-repo/distributed-quicksort:${{ github.sha }}
 
   test-and-lint:
     runs-on: ubuntu-latest

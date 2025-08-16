@@ -1,0 +1,9 @@
+# Ignore all . folders, but keep .python-version
+.*
+!.python-version
+
+# Ignore all __pycache__ folders
+__pycache__/
+
+# Ignore dist folder
+dist/
