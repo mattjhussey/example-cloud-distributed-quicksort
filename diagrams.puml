@@ -1,0 +1,64 @@
+@startuml Design Overview
+autoactivate on
+autonumber "<b>[00]"
+Actor User
+Boundary WebApp
+Database "Complete Job Store" AS CompleteJobStore
+Control "Unsorted Event Queue" AS UnsortedEventQueue
+Control "Sorted Event Queue" AS SortedEventQueue
+Control "Quicksort Service" AS QuicksortService
+Control "Combiner Service" AS CombinerService
+
+par Submitting a Job
+    User -> WebApp : Submit Number String
+        WebApp -> UnsortedEventQueue : Add job to Event Queue
+        return
+    return
+else Processing Jobs
+    loop Forever
+        QuicksortService -> UnsortedEventQueue : Get Job from Event Queue
+        return
+        QuicksortService -> QuicksortService : Process job from Event Queue
+            alt Job larger than threshold size
+                QuicksortService -> QuicksortService : Split job into smaller jobs
+                note right: The job will be split into 3 parts for QuickSort; left, middle, right
+                    QuicksortService -> UnsortedEventQueue : Add smaller jobs to Event Queue
+                    return
+                return
+            else Job smaller than (or equal to) threshold size
+                QuicksortService -> SortedEventQueue : Add job to Sorted Event Queue
+                return
+            end
+        return
+    end
+else Recombine Jobs
+    loop Forever
+        CombinerService -> SortedEventQueue : Get Job from Sorted Event Queue
+        return
+        alt Job is Fully recombined
+            CombinerService -> CompleteJobStore : Store Completed Job
+            return
+        else Job is not Fully recombined
+            CombinerService -> CombinerService: Look for other pieces, but where from???
+                alt Parts found for recombination
+                    CombinerService -> CombinerService: Combine parts
+                        CombinerService -> SortedEventQueue : Add recombined job to Sorted Event Queue
+                        return
+                    return
+                else Could not find parts for recombination
+                    CombinerService -> SortedEventQueue : Add job back to Sorted Event Queue
+                    return
+                return
+            return
+        end
+    end
+else View Results
+    User -> WebApp : Request Results
+        WebApp -> CompleteJobStore : Get Results
+        return
+        WebApp -> WebApp : Display Results
+        return
+    return
+end
+
+@enduml
