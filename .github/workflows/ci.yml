@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    # if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,7 +28,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install uv
-          uv build
+          uv --no-dev build
 
       # Capture build artifacts from dist folder
       - name: Upload build artifacts
@@ -41,7 +41,6 @@ jobs:
         run: echo "Build successful!"
 
   test-and-lint:
-    # if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -66,24 +65,3 @@ jobs:
           uv run black --check .
           uv run ruff check
           uv run mypy .
-
-  manual-build:
-    # if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.12
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install uv
-          uv sync
-
-      - name: Run application build
-        run: echo "Manual build successful!"
