@@ -26,7 +26,7 @@ def test_submit_job(client):
     """Test job submission."""
     test_data = [64, 34, 25, 12, 22, 11, 90]
     response = client.post("/jobs", json={"data": test_data})
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "job_id" in data
@@ -44,16 +44,16 @@ def test_list_empty_jobs(client):
 def test_job_creation_and_retrieval(client):
     """Test creating a job and retrieving it."""
     test_data = [5, 2, 8, 1, 9]
-    
+
     # Submit job
     response = client.post("/jobs", json={"data": test_data})
     assert response.status_code == 200
     job_id = response.json()["job_id"]
-    
+
     # Get specific job
     response = client.get(f"/jobs/{job_id}")
     assert response.status_code == 200
-    
+
     job = response.json()
     assert job["id"] == job_id
     assert job["data"] == test_data
@@ -79,16 +79,16 @@ async def test_job_execution():
     """Test that job execution works correctly."""
     # Clear any existing jobs
     job_manager.jobs.clear()
-    
+
     test_data = [3, 1, 4, 1, 5]
     expected_result = [1, 1, 3, 4, 5]
-    
+
     # Create a job
     job_id = job_manager.create_job(test_data)
-    
+
     # Execute the job
     await job_manager.execute_job(job_id)
-    
+
     # Check the result
     job = job_manager.get_job(job_id)
     assert job is not None

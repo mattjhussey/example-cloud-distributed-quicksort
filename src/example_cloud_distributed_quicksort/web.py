@@ -16,6 +16,7 @@ from .main import quicksort_distributed
 
 class JobStatus(str, Enum):
     """Job status enumeration."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -24,6 +25,7 @@ class JobStatus(str, Enum):
 
 class Job(BaseModel):
     """Job data model."""
+
     id: str
     data: List[int]
     status: JobStatus
@@ -35,60 +37,58 @@ class Job(BaseModel):
 
 class JobSubmission(BaseModel):
     """Job submission request model."""
+
     data: List[int]
 
 
 class JobManager:
     """Simple in-memory job manager."""
-    
+
     def __init__(self):
         self.jobs: Dict[str, Job] = {}
         self.logger = logging.getLogger(__name__)
-    
+
     def create_job(self, data: List[int]) -> str:
         """Create a new job and return its ID."""
         job_id = str(uuid.uuid4())
         job = Job(
-            id=job_id,
-            data=data,
-            status=JobStatus.PENDING,
-            created_at=datetime.now()
+            id=job_id, data=data, status=JobStatus.PENDING, created_at=datetime.now()
         )
         self.jobs[job_id] = job
         self.logger.info(f"Created job {job_id} with {len(data)} elements")
         return job_id
-    
+
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get a job by ID."""
         return self.jobs.get(job_id)
-    
+
     def list_jobs(self) -> List[Job]:
         """List all jobs."""
         return list(self.jobs.values())
-    
+
     async def execute_job(self, job_id: str) -> None:
         """Execute a job asynchronously."""
         job = self.jobs.get(job_id)
         if not job:
             return
-        
+
         try:
             job.status = JobStatus.RUNNING
             self.logger.info(f"Starting execution of job {job_id}")
-            
+
             result = await quicksort_distributed(job.data)
-            
+
             job.result = result
             job.status = JobStatus.COMPLETED
             job.completed_at = datetime.now()
-            
+
             self.logger.info(f"Completed job {job_id} successfully")
-            
+
         except Exception as e:
             job.status = JobStatus.FAILED
             job.error = str(e)
             job.completed_at = datetime.now()
-            
+
             self.logger.error(f"Job {job_id} failed: {e}")
 
 
@@ -99,7 +99,7 @@ job_manager = JobManager()
 app = FastAPI(
     title="Distributed Quicksort API",
     description="A web interface for submitting and monitoring distributed quicksort jobs",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 
@@ -249,12 +249,12 @@ async def submit_job(job_submission: JobSubmission):
     """Submit a new sorting job."""
     if not job_submission.data:
         raise HTTPException(status_code=400, detail="Data cannot be empty")
-    
+
     job_id = job_manager.create_job(job_submission.data)
-    
+
     # Execute the job asynchronously
     asyncio.create_task(job_manager.execute_job(job_id))
-    
+
     return {"job_id": job_id, "message": "Job submitted successfully"}
 
 
@@ -264,7 +264,7 @@ async def get_job(job_id: str):
     job = job_manager.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     return job
 
 
@@ -280,6 +280,7 @@ async def list_jobs():
 def start_web_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     """Start the FastAPI web server."""
     import uvicorn
+
     uvicorn.run(app, host=host, port=port)
 
 
@@ -287,11 +288,11 @@ def web_main() -> None:
     """Web server CLI entry point."""
     import logging
     from .main import setup_logging
-    
+
     setup_logging()
     logger = logging.getLogger(__name__)
     logger.info("Starting Distributed Quicksort Web Server")
-    
+
     start_web_server()
 
 
