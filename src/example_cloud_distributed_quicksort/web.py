@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from .main import quicksort_distributed
+from .kafka_utils import JobEventProducer, JobStatusConsumer, KafkaConfig
 
 
 class JobStatus(str, Enum):
@@ -42,11 +42,84 @@ class JobSubmission(BaseModel):
 
 
 class JobManager:
-    """Simple in-memory job manager."""
+    """Kafka-enabled job manager."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: Optional[KafkaConfig] = None) -> None:
         self.jobs: Dict[str, Job] = {}
         self.logger = logging.getLogger(__name__)
+        self.config = config or KafkaConfig()
+        self.job_producer: Optional[JobEventProducer] = None
+        self.status_consumer: Optional[JobStatusConsumer] = None
+        self._status_task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        """Start Kafka producers and consumers."""
+        self.job_producer = JobEventProducer(self.config)
+        await self.job_producer.start()
+        
+        self.status_consumer = JobStatusConsumer(self.config)
+        await self.status_consumer.start()
+        
+        # Start background task to consume status updates
+        self._status_task = asyncio.create_task(self._consume_status_updates())
+        self.logger.info("JobManager started with Kafka integration")
+
+    async def stop(self) -> None:
+        """Stop Kafka producers and consumers."""
+        if self._status_task:
+            self._status_task.cancel()
+            try:
+                await self._status_task
+            except asyncio.CancelledError:
+                pass
+        
+        if self.job_producer:
+            await self.job_producer.stop()
+        
+        if self.status_consumer:
+            await self.status_consumer.stop()
+        
+        self.logger.info("JobManager stopped")
+
+    async def _consume_status_updates(self) -> None:
+        """Background task to consume job status updates from Kafka."""
+        try:
+            async for status_event in self.status_consumer.consume_status():
+                await self._handle_status_update(status_event)
+        except asyncio.CancelledError:
+            self.logger.info("Status consumer task cancelled")
+        except Exception as e:
+            self.logger.error(f"Error in status consumer: {e}")
+
+    async def _handle_status_update(self, status_event: dict) -> None:
+        """Handle a job status update event."""
+        job_id = status_event.get("job_id")
+        status = status_event.get("status")
+        result = status_event.get("result")
+        error = status_event.get("error")
+
+        if not job_id or not status:
+            self.logger.error(f"Invalid status event: {status_event}")
+            return
+
+        job = self.jobs.get(job_id)
+        if not job:
+            self.logger.warning(f"Received status update for unknown job {job_id}")
+            return
+
+        # Update job status
+        job.status = JobStatus(status)
+        
+        if result is not None:
+            job.result = result
+        
+        if error:
+            job.error = error
+        
+        if status in ["completed", "failed"]:
+            job.completed_at = datetime.now()
+
+        self.logger.info(f"Updated job {job_id} status to {status}")
 
     def create_job(self, data: List[int]) -> str:
         """Create a new job and return its ID."""
@@ -58,6 +131,14 @@ class JobManager:
         self.logger.info(f"Created job {job_id} with {len(data)} elements")
         return job_id
 
+    async def submit_job(self, job_id: str, data: List[int]) -> None:
+        """Submit a job to Kafka for processing."""
+        if not self.job_producer:
+            raise RuntimeError("JobManager not started")
+        
+        await self.job_producer.publish_job(job_id, data)
+        self.logger.info(f"Submitted job {job_id} to Kafka")
+
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get a job by ID."""
         return self.jobs.get(job_id)
@@ -65,31 +146,6 @@ class JobManager:
     def list_jobs(self) -> List[Job]:
         """List all jobs."""
         return list(self.jobs.values())
-
-    async def execute_job(self, job_id: str) -> None:
-        """Execute a job asynchronously."""
-        job = self.jobs.get(job_id)
-        if not job:
-            return
-
-        try:
-            job.status = JobStatus.RUNNING
-            self.logger.info(f"Starting execution of job {job_id}")
-
-            result = await quicksort_distributed(job.data)
-
-            job.result = result
-            job.status = JobStatus.COMPLETED
-            job.completed_at = datetime.now()
-
-            self.logger.info(f"Completed job {job_id} successfully")
-
-        except Exception as e:
-            job.status = JobStatus.FAILED
-            job.error = str(e)
-            job.completed_at = datetime.now()
-
-            self.logger.error(f"Job {job_id} failed: {e}")
 
 
 # Global job manager instance
@@ -101,6 +157,18 @@ app = FastAPI(
     description="A web interface for submitting and monitoring distributed quicksort jobs",
     version="0.1.0",
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Kafka connections on startup."""
+    await job_manager.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up Kafka connections on shutdown."""
+    await job_manager.stop()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -252,8 +320,8 @@ async def submit_job(job_submission: JobSubmission) -> Dict[str, str]:
 
     job_id = job_manager.create_job(job_submission.data)
 
-    # Execute the job asynchronously
-    asyncio.create_task(job_manager.execute_job(job_id))
+    # Submit job to Kafka for processing
+    await job_manager.submit_job(job_id, job_submission.data)
 
     return {"job_id": job_id, "message": "Job submitted successfully"}
 
