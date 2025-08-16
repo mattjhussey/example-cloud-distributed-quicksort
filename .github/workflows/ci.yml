@@ -27,9 +27,15 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install hatchling
-          hatch build
-          pip install dist/*.whl
+          pip install uv
+          uv build
+
+      # Capture build artifacts from dist folder
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/*
 
       - name: Run application build
         run: echo "Build successful!"
