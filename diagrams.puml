@@ -16,9 +16,9 @@
     }
 
     class CombinationJob {
-        +left: JobId
-        +middle: JobId
-        +right: JobId
+        +left_sub_job: JobId
+        +middle_sub_job: JobId
+        +right_sub_job: JobId
     }
 
     Job <|.. UnsortedJob
@@ -27,9 +27,9 @@
 
     Job *-- JobId : id
 
-    CombinationJob *-- JobId : left
-    CombinationJob *-- JobId : middle
-    CombinationJob *-- JobId : right
+    CombinationJob *-- JobId : left sub job
+    CombinationJob *-- JobId : middle sub
+    CombinationJob *-- JobId : right sub
 @enduml
 
 @startuml Design Overview
@@ -97,7 +97,7 @@ else Recombine Jobs
             CombinerService -> JobStore : Store Completed Job
             return
         else Job is not Fully recombined
-            CombinerService -> CombinerService: Look for other pieces, but where from???
+            CombinerService -> CombinerService: Look for other pieces
                 alt Parts found for recombination
                     CombinerService -> CombinerService: Combine parts
                         CombinerService -> SortedEventQueue : Add recombined job to Sorted Event Queue
