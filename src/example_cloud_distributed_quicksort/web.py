@@ -1,6 +1,7 @@
 """FastAPI web interface for the distributed quicksort application."""
 
 import asyncio
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -9,6 +10,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from kafka import KafkaProducer
 from pydantic import BaseModel
 
 from .main import quicksort_distributed
@@ -101,6 +103,16 @@ app = FastAPI(
     description="A web interface for submitting and monitoring distributed quicksort jobs",
     version="0.1.0",
 )
+
+# Kafka producer instance
+try:
+    producer = KafkaProducer(
+        bootstrap_servers="kafka:9092",  # Use the Kafka container hostname
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+    )
+except Exception as e:
+    producer = None
+    logging.error(f"Failed to initialize Kafka producer: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -252,8 +264,9 @@ async def submit_job(job_submission: JobSubmission) -> Dict[str, str]:
 
     job_id = job_manager.create_job(job_submission.data)
 
-    # Execute the job asynchronously
-    asyncio.create_task(job_manager.execute_job(job_id))
+    # Publish the job to Kafka
+    producer.send("quicksort-jobs", {"job_id": job_id, "data": job_submission.data})
+    producer.flush()
 
     return {"job_id": job_id, "message": "Job submitted successfully"}
 

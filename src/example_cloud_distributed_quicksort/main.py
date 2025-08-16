@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+from kafka import KafkaConsumer
+import json
 
 
 def setup_logging() -> None:
@@ -48,6 +50,26 @@ async def quicksort_distributed(data: list[int]) -> list[int]:
     return result
 
 
+async def process_kafka_jobs() -> None:
+    """Consume and process jobs from Kafka."""
+    consumer = KafkaConsumer(
+        "quicksort-jobs",
+        bootstrap_servers="kafka:9092",  # Use the Kafka container hostname
+        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+    )
+    logger = logging.getLogger(__name__)
+
+    for message in consumer:
+        job = message.value
+        job_id = job["job_id"]
+        data = job["data"]
+        logger.info(f"Received job {job_id} with {len(data)} elements from Kafka")
+
+        # Process the job
+        sorted_data = await quicksort_distributed(data)
+        logger.info(f"Job {job_id} completed. Result: {sorted_data}")
+
+
 async def main() -> None:
     """Main application entry point."""
     setup_logging()
@@ -55,15 +77,8 @@ async def main() -> None:
 
     logger.info("Starting example cloud distributed quicksort application")
 
-    # Example data to sort
-    test_data = [64, 34, 25, 12, 22, 11, 90]
-    logger.info(f"Input data: {test_data}")
-
-    sorted_data = await quicksort_distributed(test_data)
-    logger.info(f"Sorted data: {sorted_data}")
-
-    print(f"Original: {test_data}")
-    print(f"Sorted:   {sorted_data}")
+    # Start Kafka job processing
+    await process_kafka_jobs()
 
 
 def cli_main() -> None:
