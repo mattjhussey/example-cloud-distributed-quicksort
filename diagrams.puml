@@ -1,19 +1,62 @@
+@startuml Job Structure
+    class JobId {
+        +id: String
+    }
+
+    abstract class Job {
+        +id: JobId
+    }
+
+    class UnsortedJob {
+        +data: List[Integer]
+    }
+
+    class SortedJob {
+        +data: List[Integer]
+    }
+
+    class CombinationJob {
+        +left: JobId
+        +middle: JobId
+        +right: JobId
+    }
+
+    Job <|.. UnsortedJob
+    Job <|.. CombinationJob
+    Job <|.. SortedJob
+
+    Job *-- JobId : id
+
+    CombinationJob *-- JobId : left
+    CombinationJob *-- JobId : middle
+    CombinationJob *-- JobId : right
+@enduml
+
 @startuml Design Overview
 autoactivate on
 autonumber "<b>[00]"
 Actor User
 Boundary WebApp
-Database "Complete Job Store" AS CompleteJobStore
+Database "Job Store" AS JobStore
 Control "Unsorted Event Queue" AS UnsortedEventQueue
-Control "Sorted Event Queue" AS SortedEventQueue
 Control "Quicksort Service" AS QuicksortService
+Control "Sorted Event Queue" AS SortedEventQueue
 Control "Combiner Service" AS CombinerService
 
 par Submitting a Job
     User -> WebApp : Submit Number String
-        WebApp -> UnsortedEventQueue : Add job to Event Queue
+        WebApp -> JobStore : Register a new job
         return
     return
+else Monitoring Unsorted Jobs
+    loop Forever
+        JobStore -> JobStore : Check for new jobs
+            alt New jobs found
+                JobStore -> UnsortedEventQueue : Add new jobs to Event Queue(JobId)
+                return
+            end
+        return
+    end
 else Processing Jobs
     loop Forever
         QuicksortService -> UnsortedEventQueue : Get Job from Event Queue
@@ -22,21 +65,36 @@ else Processing Jobs
             alt Job larger than threshold size
                 QuicksortService -> QuicksortService : Split job into smaller jobs
                 note right: The job will be split into 3 parts for QuickSort; left, middle, right
-                    QuicksortService -> UnsortedEventQueue : Add smaller jobs to Event Queue
+                    QuicksortService -> JobStore : Register Sub Jobs
                     return
                 return
             else Job smaller than (or equal to) threshold size
-                QuicksortService -> SortedEventQueue : Add job to Sorted Event Queue
+                QuicksortService -> QuicksortService : Sort job
+                return
+                QuicksortService -> JobStore : Add completed job
+                return
+            end
+        return
+    end
+else Monitoring Sorted Jobs
+    loop Forever
+        JobStore -> JobStore : Check for completed jobs
+            alt Completed jobs found
+                JobStore -> JobStore : Mark jobs as completed
+                return
+                JobStore -> SortedEventQueue : Add completed jobs to Sorted Event Queue
                 return
             end
         return
     end
 else Recombine Jobs
     loop Forever
-        CombinerService -> SortedEventQueue : Get Job from Sorted Event Queue
+        CombinerService -> SortedEventQueue : Get Combining Job from Sorted Event Queue
+        return
+        CombinerService -> JobStore : Get parts for recombination
         return
         alt Job is Fully recombined
-            CombinerService -> CompleteJobStore : Store Completed Job
+            CombinerService -> JobStore : Store Completed Job
             return
         else Job is not Fully recombined
             CombinerService -> CombinerService: Look for other pieces, but where from???
@@ -48,13 +106,13 @@ else Recombine Jobs
                 else Could not find parts for recombination
                     CombinerService -> SortedEventQueue : Add job back to Sorted Event Queue
                     return
-                return
+                end
             return
         end
     end
 else View Results
     User -> WebApp : Request Results
-        WebApp -> CompleteJobStore : Get Results
+        WebApp -> JobStore : Get Results
         return
         WebApp -> WebApp : Display Results
         return
