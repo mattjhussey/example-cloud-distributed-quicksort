@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Set up basic logging."""
     logging.basicConfig(
         level=logging.INFO,

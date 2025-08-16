@@ -7,14 +7,14 @@ from example_cloud_distributed_quicksort.web import app, job_manager, JobStatus
 
 
 @pytest.fixture
-def client():
+def client() -> TestClient:
     """Create a test client for the FastAPI app."""
     # Clear any existing jobs before each test
     job_manager.jobs.clear()
     return TestClient(app)
 
 
-def test_home_page(client):
+def test_home_page(client: TestClient) -> None:
     """Test that the home page loads correctly."""
     response = client.get("/")
     assert response.status_code == 200
@@ -22,7 +22,7 @@ def test_home_page(client):
     assert "Submit New Sorting Job" in response.text
 
 
-def test_submit_job(client):
+def test_submit_job(client: TestClient) -> None:
     """Test job submission."""
     test_data = [64, 34, 25, 12, 22, 11, 90]
     response = client.post("/jobs", json={"data": test_data})
@@ -34,14 +34,14 @@ def test_submit_job(client):
     assert data["message"] == "Job submitted successfully"
 
 
-def test_list_empty_jobs(client):
+def test_list_empty_jobs(client: TestClient) -> None:
     """Test listing jobs when there are none."""
     response = client.get("/jobs")
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_job_creation_and_retrieval(client):
+def test_job_creation_and_retrieval(client: TestClient) -> None:
     """Test creating a job and retrieving it."""
     test_data = [5, 2, 8, 1, 9]
 
@@ -60,14 +60,14 @@ def test_job_creation_and_retrieval(client):
     assert job["status"] in [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.COMPLETED]
 
 
-def test_job_not_found(client):
+def test_job_not_found(client: TestClient) -> None:
     """Test retrieving a non-existent job."""
     response = client.get("/jobs/non-existent-id")
     assert response.status_code == 404
     assert "Job not found" in response.json()["detail"]
 
 
-def test_empty_data_submission(client):
+def test_empty_data_submission(client: TestClient) -> None:
     """Test submitting an empty data array."""
     response = client.post("/jobs", json={"data": []})
     assert response.status_code == 400
@@ -75,7 +75,7 @@ def test_empty_data_submission(client):
 
 
 @pytest.mark.asyncio
-async def test_job_execution():
+async def test_job_execution() -> None:
     """Test that job execution works correctly."""
     # Clear any existing jobs
     job_manager.jobs.clear()

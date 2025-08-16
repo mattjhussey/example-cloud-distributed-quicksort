@@ -44,7 +44,7 @@ class JobSubmission(BaseModel):
 class JobManager:
     """Simple in-memory job manager."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.jobs: Dict[str, Job] = {}
         self.logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ app = FastAPI(
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root() -> HTMLResponse:
     """Main web interface."""
     html_content = """
     <!DOCTYPE html>
@@ -245,7 +245,7 @@ async def root():
 
 
 @app.post("/jobs")
-async def submit_job(job_submission: JobSubmission):
+async def submit_job(job_submission: JobSubmission) -> Dict[str, str]:
     """Submit a new sorting job."""
     if not job_submission.data:
         raise HTTPException(status_code=400, detail="Data cannot be empty")
@@ -259,7 +259,7 @@ async def submit_job(job_submission: JobSubmission):
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str):
+async def get_job(job_id: str) -> Job:
     """Get job status and results by ID."""
     job = job_manager.get_job(job_id)
     if not job:
@@ -269,7 +269,7 @@ async def get_job(job_id: str):
 
 
 @app.get("/jobs")
-async def list_jobs():
+async def list_jobs() -> List[Job]:
     """List all jobs."""
     jobs = job_manager.list_jobs()
     # Sort by creation time, newest first

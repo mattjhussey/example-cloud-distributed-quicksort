@@ -64,7 +64,7 @@ jobs:
       - name: Run linters
         run: |
           uv run black --check .
-          uv run ruff .
+          uv run ruff check
           uv run mypy .
 
   manual-build:
