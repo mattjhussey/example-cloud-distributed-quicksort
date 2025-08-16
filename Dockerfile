@@ -30,7 +30,7 @@ RUN \
 FROM python:3.12-slim AS run
 
 # Install dependencies
-RUN apt update && apt install -y curl
+RUN apt update && apt install -y curl && apt clean && rm -rf /var/lib/apt/lists/*
 
 # Run as non-root user
 RUN adduser --disabled-password --gecos '' appuser
