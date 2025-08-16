@@ -47,6 +47,9 @@ USER appuser
 # Set the working directory in the container
 WORKDIR /app
 
+# Ensure the PATH includes the directory for user-installed executables
+ENV PATH="/home/appuser/.local/bin:$PATH"
+
 RUN pip install --no-cache-dir dist/*.whl
 
 # Check the health of the container
