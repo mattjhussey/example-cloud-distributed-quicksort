@@ -45,7 +45,9 @@ class JobSubmission(BaseModel):
 class JobManager:
     """Kafka-enabled job manager."""
 
-    def __init__(self, config: Optional[KafkaConfig] = None, test_mode: bool = False) -> None:
+    def __init__(
+        self, config: Optional[KafkaConfig] = None, test_mode: bool = False
+    ) -> None:
         self.jobs: Dict[str, Job] = {}
         self.logger = logging.getLogger(__name__)
         self.config = config or KafkaConfig()
@@ -59,13 +61,13 @@ class JobManager:
         if self.test_mode:
             self.logger.info("JobManager started in test mode (no Kafka)")
             return
-            
+
         self.job_producer = JobEventProducer(self.config)
         await self.job_producer.start()
-        
+
         self.status_consumer = JobStatusConsumer(self.config)
         await self.status_consumer.start()
-        
+
         # Start background task to consume status updates
         self._status_task = asyncio.create_task(self._consume_status_updates())
         self.logger.info("JobManager started with Kafka integration")
@@ -75,20 +77,20 @@ class JobManager:
         if self.test_mode:
             self.logger.info("JobManager stopped from test mode")
             return
-            
+
         if self._status_task:
             self._status_task.cancel()
             try:
                 await self._status_task
             except asyncio.CancelledError:
                 pass
-        
+
         if self.job_producer:
             await self.job_producer.stop()
-        
+
         if self.status_consumer:
             await self.status_consumer.stop()
-        
+
         self.logger.info("JobManager stopped")
 
     async def _consume_status_updates(self) -> None:
@@ -119,13 +121,13 @@ class JobManager:
 
         # Update job status
         job.status = JobStatus(status)
-        
+
         if result is not None:
             job.result = result
-        
+
         if error:
             job.error = error
-        
+
         if status in ["completed", "failed"]:
             job.completed_at = datetime.now()
 
@@ -149,6 +151,7 @@ class JobManager:
             if job:
                 # Import here to avoid circular import
                 from .main import quicksort_distributed
+
                 job.status = JobStatus.RUNNING
                 try:
                     job.result = await quicksort_distributed(data)
@@ -159,10 +162,10 @@ class JobManager:
                     job.error = str(e)
                     job.completed_at = datetime.now()
             return
-        
+
         if not self.job_producer:
             raise RuntimeError("JobManager not started")
-        
+
         await self.job_producer.publish_job(job_id, data)
         self.logger.info(f"Submitted job {job_id} to Kafka")
 
@@ -187,6 +190,7 @@ class JobManager:
 
             # Import here to avoid circular import
             from .main import quicksort_distributed
+
             result = await quicksort_distributed(job.data)
 
             job.result = result
