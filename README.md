@@ -35,14 +35,29 @@ This project demonstrates a distributed quicksort algorithm designed to run acro
 
 You can run the application in several ways:
 
-1. Using the main script:
+1. **Web Interface (NEW)** - Run the FastAPI web server:
    ```bash
-   uv run main.py
+   # Using PYTHONPATH
+   PYTHONPATH=src python -m example_cloud_distributed_quicksort.web
+   
+   # Or using the installed CLI command (if package is installed)
+   quicksort-web
+   ```
+   
+   Then open your web browser to http://localhost:8000 to:
+   - Submit new sorting jobs through a web form
+   - View job results and status
+   - Monitor currently running jobs
+   - Browse job history
+
+2. **Command Line** - Using the main script:
+   ```bash
+   PYTHONPATH=src python -c "from src.example_cloud_distributed_quicksort.main import cli_main; cli_main()"
    ```
 
-2. Using the installed CLI command:
+3. **Using the installed CLI command** (if package is installed):
    ```bash
-   uv run quicksort
+   quicksort
    ```
 
 ### Development
@@ -73,7 +88,8 @@ uv run mypy .
 ├── src/
 │   └── example_cloud_distributed_quicksort/
 │       ├── __init__.py
-│       └── main.py
+│       ├── main.py           # Core quicksort implementation and CLI
+│       └── web.py            # FastAPI web interface (NEW)
 ├── tests/
 │   ├── __init__.py
 │   └── test_main.py
@@ -84,7 +100,16 @@ uv run mypy .
 
 ## Current Implementation
 
-The current implementation provides a basic quicksort algorithm with structured logging and async support. This serves as a foundation for building a true distributed version that can:
+The current implementation provides:
+
+1. **Core Algorithm**: A basic quicksort algorithm with structured logging and async support
+2. **Web Interface**: A FastAPI-based web frontend that allows users to:
+   - Submit sorting jobs through a web browser
+   - View real-time job status and results
+   - Monitor job history with timestamps
+   - Access the service through a REST API
+
+This serves as a foundation for building a true distributed version that can:
 
 - Split sorting tasks across multiple Kubernetes pods
 - Use message queues for inter-node communication
