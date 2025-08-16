@@ -27,9 +27,6 @@ RUN \
     uv run ruff check && \
     uv run mypy .
 
-# Create a developer entry point
-FROM base AS dev
-
 FROM python:3.12-slim AS run
 
 # Install dependencies
