@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -44,16 +45,21 @@ class JobSubmission(BaseModel):
 class JobManager:
     """Kafka-enabled job manager."""
 
-    def __init__(self, config: Optional[KafkaConfig] = None) -> None:
+    def __init__(self, config: Optional[KafkaConfig] = None, test_mode: bool = False) -> None:
         self.jobs: Dict[str, Job] = {}
         self.logger = logging.getLogger(__name__)
         self.config = config or KafkaConfig()
+        self.test_mode = test_mode
         self.job_producer: Optional[JobEventProducer] = None
         self.status_consumer: Optional[JobStatusConsumer] = None
         self._status_task: Optional[asyncio.Task] = None
 
     async def start(self) -> None:
         """Start Kafka producers and consumers."""
+        if self.test_mode:
+            self.logger.info("JobManager started in test mode (no Kafka)")
+            return
+            
         self.job_producer = JobEventProducer(self.config)
         await self.job_producer.start()
         
@@ -66,6 +72,10 @@ class JobManager:
 
     async def stop(self) -> None:
         """Stop Kafka producers and consumers."""
+        if self.test_mode:
+            self.logger.info("JobManager stopped from test mode")
+            return
+            
         if self._status_task:
             self._status_task.cancel()
             try:
@@ -133,6 +143,23 @@ class JobManager:
 
     async def submit_job(self, job_id: str, data: List[int]) -> None:
         """Submit a job to Kafka for processing."""
+        if self.test_mode:
+            # In test mode, immediately mark as completed with sorted result
+            job = self.jobs.get(job_id)
+            if job:
+                # Import here to avoid circular import
+                from .main import quicksort_distributed
+                job.status = JobStatus.RUNNING
+                try:
+                    job.result = await quicksort_distributed(data)
+                    job.status = JobStatus.COMPLETED
+                    job.completed_at = datetime.now()
+                except Exception as e:
+                    job.status = JobStatus.FAILED
+                    job.error = str(e)
+                    job.completed_at = datetime.now()
+            return
+        
         if not self.job_producer:
             raise RuntimeError("JobManager not started")
         
@@ -147,9 +174,38 @@ class JobManager:
         """List all jobs."""
         return list(self.jobs.values())
 
+    # Keep this method for backward compatibility with tests
+    async def execute_job(self, job_id: str) -> None:
+        """Execute a job asynchronously (for backward compatibility with tests)."""
+        job = self.jobs.get(job_id)
+        if not job:
+            return
 
-# Global job manager instance
-job_manager = JobManager()
+        try:
+            job.status = JobStatus.RUNNING
+            self.logger.info(f"Starting execution of job {job_id}")
+
+            # Import here to avoid circular import
+            from .main import quicksort_distributed
+            result = await quicksort_distributed(job.data)
+
+            job.result = result
+            job.status = JobStatus.COMPLETED
+            job.completed_at = datetime.now()
+
+            self.logger.info(f"Completed job {job_id} successfully")
+
+        except Exception as e:
+            job.status = JobStatus.FAILED
+            job.error = str(e)
+            job.completed_at = datetime.now()
+
+            self.logger.error(f"Job {job_id} failed: {e}")
+
+
+# Global job manager instance - check environment for test mode
+_test_mode = os.getenv("KAFKA_DISABLED", "false").lower() == "true"
+job_manager = JobManager(test_mode=_test_mode)
 
 # FastAPI application
 app = FastAPI(
