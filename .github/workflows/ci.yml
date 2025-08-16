@@ -55,17 +55,17 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install hatchling
-          pip install .[dev]
+          pip install uv
+          uv sync
 
       - name: Run tests
-        run: pytest
+        run: uv run pytest
 
       - name: Run linters
         run: |
-          black --check .
-          ruff .
-          mypy .
+          uv run black --check .
+          uv run ruff .
+          uv run mypy .
 
   manual-build:
     if: github.event_name == 'workflow_dispatch'
@@ -82,9 +82,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install hatchling
-          hatch build
-          pip install dist/*.whl
+          pip install uv
+          uv sync
 
       - name: Run application build
         run: echo "Manual build successful!"
