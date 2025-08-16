@@ -38,7 +38,14 @@ jobs:
           path: dist/*
 
       - name: Run application build
-        run: echo "Build successful!"
+      - name: Verify build artifacts
+        run: |
+          if [ -z "$(ls -A dist 2>/dev/null)" ]; then
+            echo "No build artifacts found in dist/"
+            exit 1
+          else
+            echo "Build artifacts found in dist/"
+          fi
 
   test-and-lint:
     runs-on: ubuntu-latest
