@@ -6,7 +6,7 @@ import os
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -54,7 +54,7 @@ class JobManager:
         self.test_mode = test_mode
         self.job_producer: Optional[JobEventProducer] = None
         self.status_consumer: Optional[JobStatusConsumer] = None
-        self._status_task: Optional[asyncio.Task] = None
+        self._status_task: Optional[asyncio.Task[None]] = None
 
     async def start(self) -> None:
         """Start Kafka producers and consumers."""
@@ -96,14 +96,15 @@ class JobManager:
     async def _consume_status_updates(self) -> None:
         """Background task to consume job status updates from Kafka."""
         try:
-            async for status_event in self.status_consumer.consume_status():
-                await self._handle_status_update(status_event)
+            if self.status_consumer is not None:
+                async for status_event in self.status_consumer.consume_status():
+                    await self._handle_status_update(status_event)
         except asyncio.CancelledError:
             self.logger.info("Status consumer task cancelled")
         except Exception as e:
             self.logger.error(f"Error in status consumer: {e}")
 
-    async def _handle_status_update(self, status_event: dict) -> None:
+    async def _handle_status_update(self, status_event: Dict[str, Any]) -> None:
         """Handle a job status update event."""
         job_id = status_event.get("job_id")
         status = status_event.get("status")
@@ -220,13 +221,13 @@ app = FastAPI(
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Initialize Kafka connections on startup."""
     await job_manager.start()
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event() -> None:
     """Clean up Kafka connections on shutdown."""
     await job_manager.stop()
 

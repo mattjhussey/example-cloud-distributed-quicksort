@@ -1,6 +1,7 @@
 """Test Kafka integration components."""
 
 import pytest
+from typing import List
 from unittest.mock import AsyncMock
 
 from example_cloud_distributed_quicksort.kafka_utils import (
@@ -13,7 +14,7 @@ from example_cloud_distributed_quicksort.kafka_utils import (
 from example_cloud_distributed_quicksort.processor import JobProcessor
 
 
-def test_kafka_config():
+def test_kafka_config() -> None:
     """Test KafkaConfig with default values."""
     config = KafkaConfig()
     assert config.bootstrap_servers == "localhost:9092"
@@ -22,7 +23,7 @@ def test_kafka_config():
 
 
 @pytest.mark.asyncio
-async def test_job_event_producer():
+async def test_job_event_producer() -> None:
     """Test JobEventProducer initialization."""
     producer = JobEventProducer()
     assert producer.config is not None
@@ -31,7 +32,7 @@ async def test_job_event_producer():
 
 
 @pytest.mark.asyncio
-async def test_job_status_producer():
+async def test_job_status_producer() -> None:
     """Test JobStatusProducer initialization."""
     producer = JobStatusProducer()
     assert producer.config is not None
@@ -40,7 +41,7 @@ async def test_job_status_producer():
 
 
 @pytest.mark.asyncio
-async def test_job_event_consumer():
+async def test_job_event_consumer() -> None:
     """Test JobEventConsumer initialization."""
     consumer = JobEventConsumer()
     assert consumer.config is not None
@@ -49,7 +50,7 @@ async def test_job_event_consumer():
 
 
 @pytest.mark.asyncio
-async def test_job_status_consumer():
+async def test_job_status_consumer() -> None:
     """Test JobStatusConsumer initialization."""
     consumer = JobStatusConsumer()
     assert consumer.config is not None
@@ -58,7 +59,7 @@ async def test_job_status_consumer():
 
 
 @pytest.mark.asyncio
-async def test_job_processor():
+async def test_job_processor() -> None:
     """Test JobProcessor initialization."""
     processor = JobProcessor()
     assert processor.config is not None
@@ -68,7 +69,7 @@ async def test_job_processor():
 
 
 @pytest.mark.asyncio
-async def test_job_processor_process_single_job():
+async def test_job_processor_process_single_job() -> None:
     """Test JobProcessor._process_single_job with mock event."""
     processor = JobProcessor()
 
@@ -97,7 +98,7 @@ async def test_job_processor_process_single_job():
 
 
 @pytest.mark.asyncio
-async def test_job_processor_invalid_event():
+async def test_job_processor_invalid_event() -> None:
     """Test JobProcessor._process_single_job with invalid event."""
     processor = JobProcessor()
 
@@ -114,7 +115,7 @@ async def test_job_processor_invalid_event():
 
 
 @pytest.mark.asyncio
-async def test_job_processor_error_handling():
+async def test_job_processor_error_handling() -> None:
     """Test JobProcessor._process_single_job error handling."""
     processor = JobProcessor()
 
@@ -135,7 +136,7 @@ async def test_job_processor_error_handling():
     # Temporarily replace quicksort_distributed to simulate an error
     original_func = example_cloud_distributed_quicksort.main.quicksort_distributed
 
-    async def mock_quicksort_error(data):
+    async def mock_quicksort_error(data: List[int]) -> List[int]:
         raise ValueError("Simulated processing error")
 
     example_cloud_distributed_quicksort.main.quicksort_distributed = (

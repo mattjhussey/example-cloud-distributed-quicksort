@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Any, List, Optional
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore
 
 
 class KafkaConfig:

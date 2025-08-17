@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from .kafka_utils import JobEventConsumer, JobStatusProducer, KafkaConfig
 from .main import quicksort_distributed, setup_logging
@@ -42,7 +42,7 @@ class JobProcessor:
 
             await self._process_single_job(job_event)
 
-    async def _process_single_job(self, job_event: dict) -> None:
+    async def _process_single_job(self, job_event: Dict[str, Any]) -> None:
         """Process a single job."""
         job_id = job_event.get("job_id")
         data = job_event.get("data", [])
