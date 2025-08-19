@@ -1,6 +1,6 @@
-# Example Cloud Distributed Quicksort
+# Example Kafka
 
-An example distributed quicksort implementation for learning Kubernetes and cloud computing concepts.
+An example project for learning Kafka.
 
 ## Overview
 
