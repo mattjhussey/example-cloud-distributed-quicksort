@@ -11,6 +11,8 @@ def client() -> TestClient:
     """Create a test client for the FastAPI app."""
     # Clear any existing jobs before each test
     job_manager.jobs.clear()
+    # Force test mode for tests
+    job_manager.test_mode = True
     return TestClient(app)
 
 
